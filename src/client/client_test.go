@@ -16,8 +16,8 @@ import (
 // unit-test-1a - test our setTimeout method, which sets the default req/resp timeout in the http client
 func TestSetTimeoutFromFunc(t *testing.T) {
 	t.Parallel()
-	SetTimeout(69)
-	assert.Equal(t, DefaultClient.HTTPClient.Timeout, (time.Duration(69) * time.Second), "failed to get timeout from http client")
+	SetTimeout(123)
+	assert.Equal(t, DefaultClient.HTTPClient.Timeout, (time.Duration(123) * time.Second), "failed to get timeout from http client")
 }
 
 // unit-test-1b - test setTimeout via the client struct
@@ -37,8 +37,8 @@ func TestSetTimeoutFromStruct(t *testing.T) {
 			},
 		},
 	}
-	fakeClient.SetTimeout(69)
-	assert.Equal(t, fakeClient.HTTPClient.Timeout, (time.Duration(69) * time.Second), "failed to get timeout from http client")
+	fakeClient.SetTimeout(123)
+	assert.Equal(t, fakeClient.HTTPClient.Timeout, (time.Duration(123) * time.Second), "failed to get timeout from http client")
 }
 
 // unit-test-2a - test context handling in http client. we are sleeping our mock httpServer (serving as our psuedo-API)
