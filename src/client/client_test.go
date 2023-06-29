@@ -1,17 +1,24 @@
 package client
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
-	"time"
-	"golang.org/x/net/context"
-	"net/http/httptest"
-	"net/http"
-	"fmt"
-	"strings"
 	"errors"
+	"fmt"
 	"net"
+	"net/http"
+	"net/http/httptest"
+	"reflect"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/context"
 )
+
+func TestNewDefaultClient(t *testing.T) {
+	client := NewDefaultClient()
+	assert.True(t, true, reflect.DeepEqual(client, DefaultClient))
+}
 
 // unit-test-1a - test our setTimeout method, which sets the default req/resp timeout in the http client
 func TestSetTimeoutFromFunc(t *testing.T) {
@@ -28,11 +35,11 @@ func TestSetTimeoutFromStruct(t *testing.T) {
 			Timeout: time.Duration(10) * time.Second,
 			Transport: &http.Transport{
 				DialContext: (&net.Dialer{
-					Timeout: 10 * time.Second,
+					Timeout:   10 * time.Second,
 					KeepAlive: 10 * time.Second,
 				}).DialContext,
-				MaxIdleConns: 100,
-				MaxConnsPerHost: 100,
+				MaxIdleConns:        100,
+				MaxConnsPerHost:     100,
 				MaxIdleConnsPerHost: 100,
 			},
 		},
@@ -47,13 +54,13 @@ func TestSetTimeoutFromStruct(t *testing.T) {
 func TestSendWithCtxGoodRequest(t *testing.T) {
 	t.Parallel()
 	mockServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
-		time.Sleep(time.Millisecond*10)
+		time.Sleep(time.Millisecond * 10)
 		fmt.Fprintln(writer, "{\"message\": \"superfakeapi\"}")
 	}))
 	defer mockServer.Close()
 
 	req := Request{
-		Method: GET,
+		Method:  http.MethodGet,
 		BaseURL: mockServer.URL + "/some_endpoint",
 	}
 
@@ -67,6 +74,7 @@ func TestSendWithCtxGoodRequest(t *testing.T) {
 		t.Error("we were expected a context timeout error but didn't recieve one")
 	}
 }
+
 // unit-test-2b - testing send with context, but with a malformed request. expecting to capture an error
 func TestSendWithCtxBadRequest(t *testing.T) {
 	t.Parallel()
@@ -76,7 +84,7 @@ func TestSendWithCtxBadRequest(t *testing.T) {
 	defer mockServer.Close()
 
 	req := Request{
-		Method: "@",
+		Method:  "@",
 		BaseURL: mockServer.URL + "/some_endpoint",
 	}
 
@@ -86,22 +94,23 @@ func TestSendWithCtxBadRequest(t *testing.T) {
 		t.Error("we expected this test to fail because we're passing a malformed request object")
 	}
 }
+
 // unit-test-2c - tests the Send() function in the client package, end to end
 func TestSend(t *testing.T) {
 	t.Parallel()
 	mockServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
-		time.Sleep(time.Millisecond*10)
+		time.Sleep(time.Millisecond * 10)
 		fmt.Fprintln(writer, "{\"message\": \"superfakeapi\"}")
 	}))
 	defer mockServer.Close()
 
 	req := Request{
-		Method: GET,
+		Method:  http.MethodGet,
 		BaseURL: mockServer.URL + "/some_endpoint",
 	}
 
 	resp, err := Send(req)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	assert.Equal(t, resp.StatusCode, 200, "invalid status code returned")
@@ -132,11 +141,11 @@ func TestBuildGoodRequest(t *testing.T) {
 	headers["Accept"] = "application/json"
 	query := make(map[string]string)
 	query["foo"] = "bar"
-	req := Request{ 
-		Method:	GET,
-		BaseURL: baseURL,
+	req := Request{
+		Method:      http.MethodGet,
+		BaseURL:     baseURL,
 		QueryParams: query,
-		Headers: headers,
+		Headers:     headers,
 	}
 
 	request, err := buildRequest(req)
@@ -145,14 +154,14 @@ func TestBuildGoodRequest(t *testing.T) {
 	}
 	assert.NotNil(t, request)
 	assert.Equal(t, request.Method, "GET", "buildRequest didn't set request method properly")
-	assert.Equal(t, request.Header, http.Header(http.Header{"Accept":[]string{"application/json"}}), "failed to set proper headers")
+	assert.Equal(t, request.Header, http.Header(http.Header{"Accept": []string{"application/json"}}), "failed to set proper headers")
 }
 
 // unit-test-5 - test buildRequeset with a fudged-up Request object
 func TestBuildBadRequest(t *testing.T) {
 	t.Parallel()
 	req := Request{
-		Method: Method("@"),
+		Method: "@",
 	}
 	resp, err := buildRequest(req)
 	if err == nil {
@@ -170,7 +179,7 @@ func TestBuildGoodResponse(t *testing.T) {
 	defer mockServer.Close()
 
 	req := Request{
-		Method: GET,
+		Method:  http.MethodGet,
 		BaseURL: mockServer.URL,
 	}
 	// step 1- build a http client compatible request object
@@ -204,7 +213,7 @@ func (*panic) Close() error {
 }
 
 // unit-test-7 - force buildResponse to panic and capture event
-func TestBuildBadResponse(t *testing.T){
+func TestBuildBadResponse(t *testing.T) {
 	t.Parallel()
 	badResponse := &http.Response{
 		Body: new(panic),
@@ -216,18 +225,18 @@ func TestBuildBadResponse(t *testing.T){
 	assert.Nil(t, resp, "response should have been nil")
 }
 
-// unit-test-8 - using strict contextTimeouts to test a bad client situation. 
+// unit-test-8 - using strict contextTimeouts to test a bad client situation.
 // this should mimic a RL scenario where we are sending Requests to a dead / malformed client
 func TestBadHTTPClient(t *testing.T) {
 	t.Parallel()
 	mockServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
-		time.Sleep(time.Millisecond*10)
+		time.Sleep(time.Millisecond * 10)
 		fmt.Fprintln(writer, "{\"message\": \"superfakeapi\"}")
 	}))
 	defer mockServer.Close()
 
 	req := Request{
-		Method: GET,
+		Method:  http.MethodGet,
 		BaseURL: mockServer.URL,
 	}
 
@@ -252,7 +261,7 @@ func TestDefaultClientTransportOpts(t *testing.T) {
 	assert.Equal(t, DefaultClient.HTTPClient.Transport.(*http.Transport).MaxIdleConnsPerHost, 100, "default http transport settings impropely set")
 }
 
-// unit-test-11 - test custom 
+// unit-test-11 - test custom
 func TestSetClientTransportOpts(t *testing.T) {
 	defaultTransport := http.DefaultTransport.(*http.Transport).Clone()
 	SetClientTransportOpts(defaultTransport)
@@ -269,11 +278,11 @@ func TestSetClientTransportOptsFromStruct(t *testing.T) {
 			Timeout: time.Duration(10) * time.Second,
 			Transport: &http.Transport{
 				DialContext: (&net.Dialer{
-					Timeout: 10 * time.Second,
+					Timeout:   10 * time.Second,
 					KeepAlive: 10 * time.Second,
 				}).DialContext,
-				MaxIdleConns: 100,
-				MaxConnsPerHost: 100,
+				MaxIdleConns:        100,
+				MaxConnsPerHost:     100,
 				MaxIdleConnsPerHost: 100,
 			},
 		},
@@ -289,10 +298,10 @@ func TestSetClientTransportOptsFromStruct(t *testing.T) {
 func TestBuildRequestDefaultHeaders(t *testing.T) {
 	t.Parallel()
 	baseURL := "http://superfake.com"
-	req := Request{ 
-		Method:	GET,
+	req := Request{
+		Method:  http.MethodGet,
 		BaseURL: baseURL,
-		Body: []byte("test"),
+		Body:    []byte("test"),
 	}
 
 	request, err := buildRequest(req)
@@ -301,5 +310,5 @@ func TestBuildRequestDefaultHeaders(t *testing.T) {
 	}
 	assert.NotNil(t, request)
 	assert.Equal(t, request.Method, "GET", "buildRequest didn't set request method properly")
-	assert.Equal(t, request.Header, http.Header(http.Header{"Content-Type":[]string{"application/json"}}), "failed to set proper headers")
+	assert.Equal(t, request.Header, http.Header(http.Header{"Content-Type": []string{"application/json"}}), "failed to set proper headers")
 }

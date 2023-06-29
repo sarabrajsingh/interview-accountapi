@@ -6,18 +6,31 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	. "github.com/sarabrajsingh/interview-accountapi/src/client"
-	. "github.com/sarabrajsingh/interview-accountapi/src/models"
-	"strconv"
+	"net/http"
 	"os"
+	"strconv"
+
+	"github.com/sarabrajsingh/interview-accountapi/src/client"
+	"github.com/sarabrajsingh/interview-accountapi/src/models"
 )
 
 type URL struct {
 	BaseURL string
 }
 
-var DefaultUrl = &URL{
-	BaseURL: os.Getenv("FORM3_ACCOUNTS_API_URL"),
+var DefaultUrl URL
+
+func (u *URL) defaultBaseURL() {
+	url := os.Getenv("FORM3_ACCOUNTS_API_URL")
+	if url == "" {
+		url = "http://localhost:8080/v1/organisation/accounts"
+	}
+	u.BaseURL = url
+}
+
+func (u *URL) GetDefaultBaseURL() string {
+	u.defaultBaseURL()
+	return u.BaseURL
 }
 
 // helper function for the URL struct used in this module
@@ -26,16 +39,16 @@ func (u *URL) SetBaseURL(url string) {
 }
 
 // CREATE account without custom user context
-func Create(acc Account) (*Response, error) {
+func Create(acc models.Account) (*client.Response, error) {
 	accEncoded, err := json.Marshal(acc)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return Send(Request{
-		Method:  POST,
-		BaseURL: DefaultUrl.BaseURL,
+	return client.Send(client.Request{
+		Method:  http.MethodPost,
+		BaseURL: DefaultUrl.GetDefaultBaseURL(),
 		Body:    accEncoded,
 	})
 }
@@ -43,38 +56,39 @@ func Create(acc Account) (*Response, error) {
 // there is no method overloading in golang, nor are there default params like in python, so we need to create
 // concrete methods that encompass all functionalities
 // Create with custom context
-func CreateWithCtx(ctx context.Context, acc Account) (*Response, error) {
+func CreateWithCtx(ctx context.Context, acc models.Account) (*client.Response, error) {
 	accEncoded, err := json.Marshal(acc)
 	if err != nil {
 		return nil, err
 	}
-	return SendWithCtx(ctx, Request{
-		Method:  POST,
-		BaseURL: DefaultUrl.BaseURL,
+	return client.SendWithCtx(ctx, client.Request{
+		Method:  http.MethodPost,
+		BaseURL: DefaultUrl.GetDefaultBaseURL(),
 		Body:    accEncoded,
 	})
 }
 
 // fetch implementation
-func Fetch(id string) (*Response, error) {
-	return Send(Request{
-		Method:  GET,
-		BaseURL: fmt.Sprintf("%s/%s", DefaultUrl.BaseURL, id),
+func Fetch(id string) (*client.Response, error) {
+	return client.Send(client.Request{
+		Method:  http.MethodGet,
+		BaseURL: fmt.Sprintf("%s/%s", DefaultUrl.GetDefaultBaseURL(), id),
 	})
 }
+
 // fetch with context implementation
-func FetchWithCtx(ctx context.Context, id string) (*Response, error) {
-	return SendWithCtx(ctx, Request{
-		Method:  GET,
-		BaseURL: fmt.Sprintf("%s/%s", DefaultUrl.BaseURL, id),
+func FetchWithCtx(ctx context.Context, id string) (*client.Response, error) {
+	return client.SendWithCtx(ctx, client.Request{
+		Method:  http.MethodGet,
+		BaseURL: fmt.Sprintf("%s/%s", DefaultUrl.GetDefaultBaseURL(), id),
 	})
 }
 
 // delete implementation
-func Delete(id string, version int) (*Response, error) {
-	return Send(Request{
-		Method:  DELETE,
-		BaseURL: fmt.Sprintf("%s/%s", DefaultUrl.BaseURL, id),
+func Delete(id string, version int) (*client.Response, error) {
+	return client.Send(client.Request{
+		Method:  http.MethodDelete,
+		BaseURL: fmt.Sprintf("%s/%s", DefaultUrl.GetDefaultBaseURL(), id),
 		QueryParams: map[string]string{
 			"version": strconv.Itoa(version),
 		},
@@ -82,10 +96,10 @@ func Delete(id string, version int) (*Response, error) {
 }
 
 // delete with context implementation
-func DeleteWithCtx(ctx context.Context, id string, version int) (*Response, error) {
-	return SendWithCtx(ctx, Request{
-		Method:  DELETE,
-		BaseURL: fmt.Sprintf("%s/%s", DefaultUrl.BaseURL, id),
+func DeleteWithCtx(ctx context.Context, id string, version int) (*client.Response, error) {
+	return client.SendWithCtx(ctx, client.Request{
+		Method:  http.MethodDelete,
+		BaseURL: fmt.Sprintf("%s/%s", DefaultUrl.GetDefaultBaseURL(), id),
 		QueryParams: map[string]string{
 			"version": strconv.Itoa(version),
 		},

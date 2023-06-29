@@ -184,6 +184,12 @@ This dockerfile builds a container environment for this projects' unit tests and
 ### `src/example.go`
 `example.go` contains the source code to an example resource, which shows how a consumer might leverage the client and accounts pakcage(s) to write account objects to the backend API.
 
+### Improvments for Ambassador Labs Interview
+1. Decoupled integration tests from database, such that every integration test will restore the database to it's initial seed point
+2. Refactored unit and integration tests by introducing testing tables
+3. Unmarhalling client responses from a flat string into an Account struct object
+4. Introduced new errors package to highlight and kee
+
 ## References
 1. [SendGrid REST API](https://github.com/sendgrid/rest)
 2. [mocking outbound http requests in go: you’re (probably) doing it wrong](https://medium.com/zus-health/mocking-outbound-http-requests-in-go-youre-probably-doing-it-wrong-60373a38d2aa)

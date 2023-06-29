@@ -16,28 +16,36 @@ var DefaultClient = &Client{
 		Timeout: time.Duration(10) * time.Second,
 		Transport: &http.Transport{
 			DialContext: (&net.Dialer{
-				Timeout: 10 * time.Second,
+				Timeout:   10 * time.Second,
 				KeepAlive: 10 * time.Second,
 			}).DialContext,
-			MaxIdleConns: 100,
-			MaxConnsPerHost: 100,
+			MaxIdleConns:        100,
+			MaxConnsPerHost:     100,
 			MaxIdleConnsPerHost: 100,
 		},
 	},
 }
 
-type Method string
-
-const (
-	GET    Method = "GET"
-	POST   Method = "POST"
-	DELETE Method = "DELETE"
-	PUT    Method = "PUT"
-	PATCH  Method = "PATCH"
-)
+// constructor method for our custom client
+func NewDefaultClient() *Client {
+	return &Client{
+		HTTPClient: &http.Client{
+			Timeout: time.Duration(10) * time.Second,
+			Transport: &http.Transport{
+				DialContext: (&net.Dialer{
+					Timeout:   10 * time.Second,
+					KeepAlive: 10 * time.Second,
+				}).DialContext,
+				MaxIdleConns:        100,
+				MaxConnsPerHost:     100,
+				MaxIdleConnsPerHost: 100,
+			},
+		},
+	}
+}
 
 type Request struct {
-	Method      Method
+	Method      string
 	BaseURL     string
 	Headers     map[string]string
 	QueryParams map[string]string
@@ -52,6 +60,7 @@ type Response struct {
 
 // struct around the main http engine. if a programmer needs to override any other environmental parameter for the client
 // they can leverage this struct to do so
+// TO-DO: do we need a wrapper around this struct if we're not coupling anything else to the stl *http.Client?
 type Client struct {
 	HTTPClient *http.Client
 }
@@ -70,8 +79,13 @@ func SetClientTransportOpts(t *http.Transport) {
 	DefaultClient.HTTPClient.Transport = t
 }
 
+// helper function to set http client Transport options on a client struct
 func (c *Client) SetClientTransportOpts(t *http.Transport) {
 	c.HTTPClient.Transport = t
+}
+
+func (c *Client) SetClient(client *http.Client) {
+	c.HTTPClient = client
 }
 
 // helper function that generates URL encoded query params to a http request
@@ -89,9 +103,9 @@ func buildRequest(r Request) (*http.Request, error) {
 	if len(r.QueryParams) != 0 {
 		r.BaseURL = generateQueryParams(r.BaseURL, r.QueryParams)
 	}
-	
+
 	// generate our http client compatible http.Request object. canonical pattern to send HTTP requests to a http client
-	req, err := http.NewRequest(string(r.Method), r.BaseURL, bytes.NewReader(r.Body))
+	req, err := http.NewRequest(r.Method, r.BaseURL, bytes.NewReader(r.Body))
 
 	if err != nil {
 		return req, err
@@ -102,14 +116,14 @@ func buildRequest(r Request) (*http.Request, error) {
 		req.Header.Set(key, value)
 	}
 
-	// a small check to enforce a Content-Type: application/json in our request headers 
+	// a small check to enforce a Content-Type: application/json in our request headers
 	_, val := req.Header["Content-Type"]
 
 	if len(r.Body) > 0 && !val {
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	return req, err
+	return req, nil
 }
 
 // public facing method that takes a http.Request object, marshals it to the default client in this module,

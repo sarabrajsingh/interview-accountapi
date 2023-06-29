@@ -8,9 +8,7 @@ ENV UID="1000"
 
 WORKDIR ${HOMEDIR}
 
-ADD src src
-ADD go.mod ./
-ADD go.sum ./
+ADD ./ ./
 
 RUN apk add build-base
 
@@ -20,4 +18,4 @@ RUN addgroup -S ${NONROOTUSER} && \
     adduser -S -D -G ${NONROOTUSER} -u ${UID} ${NONROOTUSER} -s /sbin/nologin && \
     chown -R ${NONROOTUSER}:${NONROOTUSER} ${HOMEDIR}
 
-ENTRYPOINT ["go", "test", "-v", "./...", "-coverprofile=coverage_report_from_container.out"]
+ENTRYPOINT ["make"]
